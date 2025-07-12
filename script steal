@@ -1,130 +1,62 @@
--- Interface
-local gui = Instance.new("ScreenGui", game.CoreGui)
+-- Aguarda PlayerGui e personagem
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local HRP = Character:WaitForChild("HumanoidRootPart")
+
+-- Interface corrigida
+local gui = Instance.new("ScreenGui", PlayerGui)
+gui.Name = "PainelFix"
+gui.ResetOnSpawn = false
+
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 230, 0, 500)
-frame.Position = UDim2.new(0, 20, 0.5, -250)
+frame.Size = UDim2.new(0, 250, 0, 450)
+frame.Position = UDim2.new(0, 20, 0.5, -225)
 frame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+frame.BorderSizePixel = 0
 frame.Active = true
 frame.Draggable = true
 
 local layout = Instance.new("UIListLayout", frame)
 layout.Padding = UDim.new(0, 6)
+layout.SortOrder = Enum.SortOrder.LayoutOrder
 
-local function createButton(title, action)
+-- Função para botão
+local function criarBotao(nome, acao)
     local btn = Instance.new("TextButton", frame)
-    btn.Size = UDim2.new(1, -10, 0, 35)
-    btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    btn.TextColor3 = Color3.new(1,1,1)
+    btn.Size = UDim2.new(1, -10, 0, 36)
+    btn.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
+    btn.TextColor3 = Color3.new(1, 1, 1)
     btn.Font = Enum.Font.SourceSansBold
     btn.TextSize = 16
-    btn.Text = title
-    btn.MouseButton1Click:Connect(action)
+    btn.Text = nome
+    btn.MouseButton1Click:Connect(acao)
 end
 
--- Serviços
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UserInput = game:GetService("UserInputService")
-local Camera = workspace.CurrentCamera
-local LocalPlayer = Players.LocalPlayer
-local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local HRP = Character:WaitForChild("HumanoidRootPart")
-
--- Anti-Kick & Anti-Teleport
-LocalPlayer.Kick = function() return end
-local lastPos = HRP.Position
-HRP:GetPropertyChangedSignal("CFrame"):Connect(function()
-    if (HRP.Position - lastPos).Magnitude > 10 then
-        HRP.CFrame = CFrame.new(lastPos)
-        print("🚫 Teleporte bloqueado")
-    else
-        lastPos = HRP.Position
-    end
+-- Exemplo de botões
+criarBotao("✅ Painel Funcionando", function()
+    print("Botão clicado!")
 end)
 
--- Speed Boost
-local speed = false
-local function updateSpeed()
+criarBotao("Speed Boost", function()
     local hum = Character:FindFirstChildWhichIsA("Humanoid")
-    if hum then hum.WalkSpeed = speed and 32 or 16 end
-end
-LocalPlayer.CharacterAdded:Connect(function(c)
-    Character = c
-    HRP = Character:WaitForChild("HumanoidRootPart")
-    updateSpeed()
-end)
-createButton("Speed Boost", function()
-    speed = not speed
-    updateSpeed()
+    if hum then hum.WalkSpeed = hum.WalkSpeed == 16 and 32 or 16 end
 end)
 
--- Fly
-local fly = false
-createButton("Fly com WASD", function()
-    fly = not fly
-end)
-RunService.RenderStepped:Connect(function()
-    if fly and HRP then
-        local dir = Vector3.zero
-        if UserInput:IsKeyDown(Enum.KeyCode.W) then dir += Camera.CFrame.LookVector end
-        if UserInput:IsKeyDown(Enum.KeyCode.S) then dir -= Camera.CFrame.LookVector end
-        if UserInput:IsKeyDown(Enum.KeyCode.A) then dir -= Camera.CFrame.RightVector end
-        if UserInput:IsKeyDown(Enum.KeyCode.D) then dir += Camera.CFrame.RightVector end
-        HRP.Velocity = dir.Magnitude > 0 and dir.Unit * 50 or Vector3.zero
-    end
-end)
-
--- Noclip
-local noclip = false
-createButton("Noclip", function()
-    noclip = not noclip
-end)
-RunService.Stepped:Connect(function()
-    if noclip and Character then
-        for _, v in ipairs(Character:GetDescendants()) do
-            if v:IsA("BasePart") then v.CanCollide = false end
-        end
-    end
-end)
-
--- Invisibilidade
-local invisible = false
-createButton("Invisibilidade", function()
-    invisible = not invisible
-    for _, v in ipairs(Character:GetDescendants()) do
-        if v:IsA("BasePart") or v:IsA("Decal") then
-            v.Transparency = invisible and 1 or 0
-        end
-    end
-end)
-
--- Subterrâneo
-local sub = false
-createButton("Modo Subterrâneo", function()
-    sub = not sub
-    if HRP then
-        HRP.CFrame = CFrame.new(HRP.Position.X, sub and -100 or 10, HRP.Position.Z)
-    end
-end)
-
--- ESP
-local function esp(player)
-    player.CharacterAdded:Connect(function(char)
-        wait(1)
-        local head = char:FindFirstChild("Head")
-        if head and not head:FindFirstChild("ESPGui") then
-            local gui = Instance.new("BillboardGui", head)
-            gui.Name = "ESPGui"
-            gui.Size = UDim2.new(0, 100, 0, 20)
-            gui.Adornee = head
-            gui.AlwaysOnTop = true
-            local label = Instance.new("TextLabel", gui)
-            label.Size = UDim2.new(1, 0, 1, 0)
-            label.BackgroundTransparency = 1
-            label.Text = player.Name
-            label.TextColor3 = Color3.fromRGB(0,255,255)
-            label.TextScaled = true
+criarBotao("Fly com WASD", function()
+    local flying = true
+    RunService.RenderStepped:Connect(function()
+        if flying and HRP then
+            local dir = Vector3.zero
+            local cam = workspace.CurrentCamera
+            local UIS = game:GetService("UserInputService")
+            if UIS:IsKeyDown(Enum.KeyCode.W) then dir += cam.CFrame.LookVector end
+            if UIS:IsKeyDown(Enum.KeyCode.S) then dir -= cam.CFrame.LookVector end
+            if UIS:IsKeyDown(Enum.KeyCode.A) then dir -= cam.CFrame.RightVector end
+            if UIS:IsKeyDown(Enum.KeyCode.D) then dir += cam.CFrame.RightVector end
+            HRP.Velocity = dir.Magnitude > 0 and dir.Unit * 50 or Vector3.zero
         end
     end)
-end
-for
+end)
