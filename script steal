@@ -1,0 +1,183 @@
+-- 🎮 Interface nativa
+local gui = Instance.new("ScreenGui", game.CoreGui)
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 220, 0, 460)
+frame.Position = UDim2.new(0, 20, 0.5, -230)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+frame.Active = true
+frame.Draggable = true
+
+local layout = Instance.new("UIListLayout", frame)
+layout.Padding = UDim.new(0, 5)
+
+local function createButton(name, action)
+    local btn = Instance.new("TextButton", frame)
+    btn.Size = UDim2.new(1, -10, 0, 35)
+    btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextSize = 16
+    btn.Text = name
+    btn.MouseButton1Click:Connect(action)
+end
+
+-- 🔧 Serviços e variáveis
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Camera = workspace.CurrentCamera
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local HRP = Character:WaitForChild("HumanoidRootPart")
+
+-- 🛡️ Anti-kick & Anti-teleporte
+LocalPlayer.Kick = function() return nil end
+local lastPos = HRP.Position
+HRP:GetPropertyChangedSignal("CFrame"):Connect(function()
+    if (HRP.Position - lastPos).Magnitude > 10 then
+        HRP.CFrame = CFrame.new(lastPos)
+        warn("🚨 Teleporte bloqueado")
+    else
+        lastPos = HRP.Position
+    end
+end)
+
+-- 👟 Speed Boost
+local speed = false
+local function updateSpeed()
+    local hum = Character:FindFirstChildWhichIsA("Humanoid")
+    if hum then hum.WalkSpeed = speed and 32 or 16 end
+end
+LocalPlayer.CharacterAdded:Connect(function(char)
+    Character = char
+    HRP = Character:WaitForChild("HumanoidRootPart")
+    updateSpeed()
+end)
+createButton("Speed Boost", function()
+    speed = not speed
+    updateSpeed()
+end)
+
+-- ✈️ Fly
+local fly = false
+createButton("Fly com WASD", function()
+    fly = not fly
+end)
+RunService.RenderStepped:Connect(function()
+    if fly and HRP then
+        local dir = Vector3.zero
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir += Camera.CFrame.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir -= Camera.CFrame.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir -= Camera.CFrame.RightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir += Camera.CFrame.RightVector end
+        HRP.Velocity = dir.Magnitude > 0 and dir.Unit * 50 or Vector3.zero
+    end
+end)
+
+-- 🌫️ Noclip
+local noclip = false
+createButton("Noclip", function()
+    noclip = not noclip
+end)
+RunService.Stepped:Connect(function()
+    if noclip and Character then
+        for _, part in ipairs(Character:GetDescendants()) do
+            if part:IsA("BasePart") then part.CanCollide = false end
+        end
+    end
+end)
+
+-- 🫥 Invisibilidade
+local invisible = false
+createButton("Invisibilidade", function()
+    invisible = not invisible
+    for _, part in ipairs(Character:GetDescendants()) do
+        if part:IsA("BasePart") or part:IsA("Decal") then
+            part.Transparency = invisible and 1 or 0
+        end
+    end
+end)
+
+-- 🌍 Subterrâneo
+local under = false
+createButton("Modo Subterrâneo", function()
+    under = not under
+    HRP.CFrame = CFrame.new(HRP.Position.X, under and -100 or 10, HRP.Position.Z)
+end)
+
+-- 👁️ ESP
+local function criarESP(p)
+    p.CharacterAdded:Connect(function(char)
+        wait(1)
+        local head = char:FindFirstChild("Head")
+        if head and not head:FindFirstChild("ESPGui") then
+            local gui = Instance.new("BillboardGui", head)
+            gui.Name = "ESPGui"
+            gui.Size = UDim2.new(0, 100, 0, 20)
+            gui.Adornee = head
+            gui.AlwaysOnTop = true
+            local label = Instance.new("TextLabel", gui)
+            label.Size = UDim2.new(1, 0, 1, 0)
+            label.BackgroundTransparency = 1
+            label.Text = p.Name
+            label.TextColor3 = Color3.fromRGB(0, 255, 255)
+            label.TextScaled = true
+        end
+    end)
+end
+for _, p in pairs(Players:GetPlayers()) do criarESP(p) end
+Players.PlayerAdded:Connect(criarESP)
+createButton("ESP Jogadores", function()
+    for _, p in pairs(Players:GetPlayers()) do criarESP(p) end
+end)
+
+-- 🔥 Expandir StealHitbox
+createButton("Expandir StealHitbox", function()
+    local steal = workspace:FindFirstChild("StealHitbox")
+    if steal and steal:IsA("BasePart") then
+        steal.Size = Vector3.new(100, 100, 100)
+        steal.Transparency = 0.3
+        steal.CanTouch = true
+        steal.Material = Enum.Material.Neon
+        steal.Color = Color3.fromRGB(255, 0, 0)
+    end
+end)
+
+-- 🚫 Neutralizar DeliveryHitbox
+createButton("Desativar DeliveryHitbox", function()
+    local del = workspace:FindFirstChild("DeliveryHitbox")
+    if del and del:IsA("BasePart") then
+        del.CanTouch = false
+        del.CanQuery = false
+        del.CanCollide = false
+        del.Anchored = true
+        del.Transparency = 1
+        del.Size = Vector3.new(0.1, 0.1, 0.1)
+        del.Name = "DeliveryHitboxNeutralizado"
+    end
+end)
+
+-- 🧮 Campo Amount manual
+local box = Instance.new("TextBox", frame)
+box.Size = UDim2.new(1, -10, 0, 35)
+box.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+box.TextColor3 = Color3.new(1, 1, 1)
+box.Text = "Valor Amount"
+box.Font = Enum.Font.SourceSans
+box.TextSize = 16
+box.FocusLost:Connect(function()
+    local valor = tonumber(box.Text)
+    if valor then
+        local obj = workspace:FindFirstChild("Multiplier")
+        if obj then
+            local m = obj:FindFirstChild("Main")
+            local amt = m and m:FindFirstChild("Amount")
+            if amt then
+                if amt:IsA("TextLabel") then amt.Text = tostring(valor) end
+                if amt:IsA("NumberValue") then amt.Value = valor end
+            end
+        end
+    else
+        warn("Valor inválido.")
+    end
+end)
